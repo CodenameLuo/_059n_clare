@@ -26,6 +26,7 @@ set -euo pipefail
 # 可选覆盖变量：
 #   REPO=/path/to/clare                 # 仓库路径；默认从脚本位置自动推断
 #   RUNTIME=/path/to/cache_root         # HF/datasets/LeRobot/tmp/pip 缓存根目录
+#   SHORT_TMPDIR=/tmp/clare_0           # Python/PyTorch 多进程临时目录，必须是短路径
 #   PRETRAIN=/path/to/pretrain          # 基础 checkpoint 路径
 #   OUT=/path/to/output                 # smoke test 输出目录
 #   CUDA_VISIBLE_DEVICES=1              # 只让脚本看到物理 GPU 1
@@ -37,6 +38,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="${REPO:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 RUNTIME="${RUNTIME:-$REPO/_001n_my/_003n_clare_download}"
+SHORT_TMPDIR="${SHORT_TMPDIR:-/tmp/clare_$(id -u)}"
 ENV="${ENV:-${CLARE_ENV:-}}"
 
 # 2. 检查 conda 环境路径。
@@ -59,10 +61,13 @@ cd "$REPO"
 
 # 4. 创建缓存目录和输出目录。
 # RUNTIME 只放缓存；训练输出和日志放在 $REPO/outputs。
-mkdir -p "$RUNTIME"/{hf_home,hf_datasets,lerobot,tmp,pip_cache} "$REPO/outputs/_smoke" "$REPO/outputs/logs"
+mkdir -p "$RUNTIME"/{hf_home,hf_datasets,lerobot,tmp,pip_cache} "$SHORT_TMPDIR" "$REPO/outputs/_smoke" "$REPO/outputs/logs"
 
 # 5. 设置运行时环境变量。
 # 这些变量避免 Hugging Face / datasets / LeRobot / 临时文件写到默认位置。
+# Python/PyTorch multiprocessing 会在 TMPDIR 下创建 AF_UNIX socket。
+# Linux 对 AF_UNIX 路径长度有限制，所以 TMPDIR 不能使用很长的项目路径。
+# HF_HOME、HF_DATASETS_CACHE、HF_LEROBOT_HOME 仍然放在 RUNTIME，避免大缓存写到 /tmp。
 # CUDA_VISIBLE_DEVICES 控制脚本能看到哪些物理 GPU；默认只使用物理 GPU 0。
 # 例如命令前加 CUDA_VISIBLE_DEVICES=1，则脚本只会看到物理 GPU 1。
 # 在这种情况下，PyTorch 日志里的 cuda:0 指的是“可见 GPU 0”，不是物理 GPU 0。
@@ -73,7 +78,7 @@ export MUJOCO_EGL_DEVICE_ID="${MUJOCO_EGL_DEVICE_ID:-0}"
 export HF_HOME="$RUNTIME/hf_home"
 export HF_DATASETS_CACHE="$RUNTIME/hf_datasets"
 export HF_LEROBOT_HOME="$RUNTIME/lerobot"
-export TMPDIR="$RUNTIME/tmp"
+export TMPDIR="$SHORT_TMPDIR"
 export PIP_CACHE_DIR="$RUNTIME/pip_cache"
 export HF_HUB_DISABLE_SYMLINKS_WARNING=1
 
@@ -107,6 +112,7 @@ fi
 echo "REPO=$REPO"
 echo "ENV=$ENV"
 echo "RUNTIME=$RUNTIME"
+echo "TMPDIR=$TMPDIR"
 echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 echo "MUJOCO_EGL_DEVICE_ID=$MUJOCO_EGL_DEVICE_ID"
 echo "PRETRAIN=$PRETRAIN"
