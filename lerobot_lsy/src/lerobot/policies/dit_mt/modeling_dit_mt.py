@@ -97,7 +97,7 @@ class DiTMTPolicy(PreTrainedPolicy):
 
         return actions
 
-    @torch.no_grad
+    @torch.no_grad()
     def select_action(self, batch: dict[str, Tensor]) -> Tensor:
         """Select a single action given environment observations.
 
@@ -1072,4 +1072,3 @@ class LanguageEncoder(nn.Module):
         
         # Stack all embeddings into a single tensor
         return torch.stack(all_embeddings)
-

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import os
 import time
 from contextlib import nullcontext
 from pprint import pformat
@@ -25,8 +26,14 @@ import re
 
 import torch
 from termcolor import colored
-from torch.amp.grad_scaler import GradScaler
 from torch.optim import Optimizer
+
+try:
+    from torch.amp.grad_scaler import GradScaler as TorchGradScaler
+except ModuleNotFoundError:
+    from torch.cuda.amp import GradScaler as TorchGradScaler
+
+GradScaler = TorchGradScaler
 
 from lerobot.configs import parser
 from lerobot.configs.train import TrainPipelineConfig
@@ -64,6 +71,14 @@ from lerobot.utils.wandb_utils import WandBLogger
 
 from peft import get_peft_model, PeftConfig, PeftModel
 from peft.mapping import PEFT_TYPE_TO_PREFIX_MAPPING
+
+
+def make_grad_scaler(device_type: str, enabled: bool):
+    try:
+        return TorchGradScaler(device_type, enabled=enabled)
+    except TypeError:
+        return TorchGradScaler(enabled=enabled)
+
 
 class PeftWrapperPolicy(torch.nn.Module):
     policy: PreTrainedPolicy
@@ -543,7 +558,7 @@ def train(cfg: PEFTTrainPipelineConfig):
 
     logging.info("Creating optimizer and scheduler")
     # optimizer, lr_scheduler = make_optimizer_and_scheduler(cfg, policy)
-    # grad_scaler = GradScaler(device.type, enabled=cfg.policy.use_amp)
+    # grad_scaler = make_grad_scaler(device.type, enabled=cfg.policy.use_amp)
 
     adapter_optimizer = cfg.optimizer.build(adapter_params)
     if cfg.scheduler:
@@ -557,7 +572,7 @@ def train(cfg: PEFTTrainPipelineConfig):
     else:
         discriminator_lr_scheduler = None
 
-    grad_scaler = GradScaler(device.type, enabled=cfg.policy.use_amp)
+    grad_scaler = make_grad_scaler(device.type, enabled=cfg.policy.use_amp)
 
     if cfg.resume:
         step, adapter_optimizer, adapter_lr_scheduler = load_training_state(cfg.checkpoint_path, adapter_optimizer, adapter_lr_scheduler)
@@ -825,3 +840,5 @@ def train(cfg: PEFTTrainPipelineConfig):
 if __name__ == "__main__":
     init_logging()
     train()
+    logging.shutdown()
+    os._exit(0)

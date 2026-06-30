@@ -1,0 +1,19 @@
+conda create --prefix ./env_name python=3.10.18
+
+pip install -U pip setuptools wheel
+
+pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu117
+
+pip install numpy==1.26.4 datasets==3.6.0 diffusers==0.32.2 huggingface_hub==0.36.2 transformers==4.48.3 tokenizers==0.21.4 av==17.1.0 accelerate==1.14.0 safetensors==0.8.0 draccus==0.10.0 einops==0.8.2 wandb==0.28.0 deepdiff flask gdown gymnasium h5py imageio[ffmpeg] jsonlines omegaconf packaging pymunk pynput pyserial pyzmq termcolor zarr
+
+pip install --no-deps opencv-python-headless==4.13.0.92 rerun-sdk==0.33.1
+
+pip install -e ./peft_lsy --no-deps
+
+pip install -e ./lerobot_lsy --no-deps
+
+pip uninstall -y torchcodec
+
+pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu117
+
+pip install --no-deps numpy==1.26.4

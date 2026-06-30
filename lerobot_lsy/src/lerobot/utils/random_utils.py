@@ -56,7 +56,7 @@ def serialize_numpy_rng_state() -> dict[str, torch.Tensor]:
     # Ensure no breaking changes from numpy
     assert np_state[0] == "MT19937"
     return {
-        "np_rng_state_values": torch.tensor(np_state[1], dtype=torch.int64),
+        "np_rng_state_values": torch.from_numpy(np_state[1].astype(np.int64, copy=False)),
         "np_rng_state_index": torch.tensor([np_state[2]], dtype=torch.int64),
         "np_rng_has_gauss": torch.tensor([np_state[3]], dtype=torch.int64),
         "np_rng_cached_gaussian": torch.tensor([np_state[4]], dtype=torch.float32),
@@ -69,7 +69,7 @@ def deserialize_numpy_rng_state(rng_state_dict: dict[str, torch.Tensor]) -> None
     """
     np_state = (
         "MT19937",
-        rng_state_dict["np_rng_state_values"].numpy(),
+        rng_state_dict["np_rng_state_values"].cpu().numpy().astype(np.uint32, copy=False),
         rng_state_dict["np_rng_state_index"].item(),
         rng_state_dict["np_rng_has_gauss"].item(),
         rng_state_dict["np_rng_cached_gaussian"].item(),
